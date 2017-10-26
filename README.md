@@ -15,6 +15,9 @@ A python implementation where `python --version >= 3`
  - nltk
  - enchant
 
+Optional
+ - virtualenv
+
 ### Running
 
 This is the hypothetical way to run the scripts. (not implemented yet)
@@ -32,6 +35,7 @@ This is the hypothetical way to run the scripts. (not implemented yet)
   $ git checkout <EXISTING-BRANCH-TO-WORK-ON>
   or
   $ git checkout -b <NEW-BRANCH-FOR-NEW-FEATURES>
+  ~~~
 
 ## File Descriptions
 * train.dat
