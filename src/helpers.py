@@ -1,73 +1,82 @@
 import numpy as np;
 from scipy.sparse import lil_matrix;
 
-actorsFile = open("../res/additional_files/movie_actors.dat", "r");
-directorsFile = open("../res/additional_files/movie_directors.dat", "r");
-genresFile = open("../res/additional_files/movie_genres.dat", "r");
-movieTagsFile = open("../res/additional_files/movie_tags.dat", "r");
-tagsFile = open("../res/additional_files/tags.dat", "r");
-testFile = open("../res/additional_files/test.dat", "r");
-trainFile = open("../res/additional_files/train.dat", "r");
-usersFile = open("../res/additional_files/user_taggedmovies.dat", "r");
-
-''' 
-* Creating an array for each movie data. 
-* Only works for movie data. 
-* The index where the element is in the 
+'''
+* Creating an array for each movie data.
+* Only works for movie data.
+* The index where the element is in the
   array is the movie id, index=movieid.
-* Input is an initialized list, output 
+* Input is an initialized list, output
   is the array form of the data.
 '''
 def createMovieNumpy(file, list):
-    for item in file:
-        if item.startswith("movieID") or item.startswith("userID"):
-            continue;
-        item = item.replace("\r","").replace("\n","");
+    for item in file.readlines()[1:]:
+        item = item.replace("\r", "").replace("\n", "");
         tempList = item.split("\t");
-        list[int(tempList[0])-1].append(tempList[1:]);
-    
+        list[int(tempList[0]) - 1].append(tempList[1:]);
     array = np.array(list);
     return array;
 
-#Actors
-actorsList = [[] for i in range(65134)];
-actorstArray = createMovieNumpy(actorsFile,actorsList);
- 
-#Directors
-directorsList = [[] for i in range(65134)];
-directorsArray = createMovieNumpy(directorsFile,directorsList);
- 
-#Genres
-genresList = [[] for i in range(65134)];
-genresArray = createMovieNumpy(genresFile,genresList);
-
-#Movie Tags
-movieTagsList = [[] for i in range(65134)];
-movieTagsArray = createMovieNumpy(movieTagsFile,movieTagsList);
-
-#Train Data Matrix
-''' 
- * This matrix contains users as rows
-   and movies as columns, each cell 
-   contains the movie rating.
-* It is a lil_sparse matrix because 
+'''
+* This matrix contains users as rows
+  and movies as columns, each cell
+  contains the movie rating.
+* It is a lil_sparse matrix because
   there are a lot of users missing
   and not all user have seen all movies.
 '''
 def createMatrix(file, matrix):
-    for item in file:
-        if item.startswith("userID"):
-            continue;
-        item = item.replace("\r","").replace("\n","");
+    for item in file.readlines()[1:]:
+        item = item.replace("\r", "").replace("\n", "").replace("\t", " ");
         tempList = item.split(" ");
         matrix[int(tempList[0]), int(tempList[1])] = tempList[2];
+    file.seek(0)
     return matrix;
 
-#Train Data Users info
-trainMatrix = lil_matrix((71535, 65134))
-trainMatrix = createMatrix(trainFile, trainMatrix);
-print(trainMatrix[75,110]);#cell is 4 testing it works.
-print(trainMatrix[78,41]);#cell is 4.5 testing it works.
+# returns TF matrix
+def tf(file, array, rows, cols):
+    tf = lil_matrix((rows, cols))
+    for item in file.readlines()[1:]:
+        item = item.replace("\r", "").replace("\n", "").replace("\t", " ");
+        tempList = item.split(" ");
+        tf[int(tempList[0]), int(tempList[1])] = array[int(tempList[0])][int(tempList[1])] / array[int(tempList[0])].sum()
+    file.seek(0)
+    return tf
 
+# returns IDF matrix
+def idf(file, array, rows, cols):
+    tag_counts = [0 for i in range(0, 16530)]
+    idf = lil_matrix((rows, cols))
+    for item in file.readlines()[1:]:
+        item = item.replace("\r", "").replace("\n", "").replace("\t", " ");
+        tempList = item.split(" ");
+        tag_counts[int(tempList[1])] += 1
+    file.seek(0)
+    for item in file.readlines()[1:]:
+        item = item.replace("\r", "").replace("\n", "").replace("\t", " ");
+        tempList = item.split(" ");
+        idf[int(tempList[0]), int(tempList[1])] = np.log10(65134 / tag_counts[int(tempList[1])])
+    file.seek(0)
+    return idf
 
-    
+# run tf_idf
+def tf_idf(file, array, rows, cols):
+    tfMatrix = tf(file, array, rows, cols)
+    idfMatrix = idf(file, array, rows, cols)
+    tfidfMatrix = lil_matrix((rows, cols))
+    for item in file.readlines()[1:]:
+        item = item.replace("\r", "").replace("\n", "").replace("\t", " ");
+        tempList = item.split(" ");
+        i = int(tempList[0])
+        j = int(tempList[1])
+        tfidfMatrix[i, j] = tfMatrix[i, j] * idfMatrix[i, j]
+    file.seek(0)
+    return tfidfMatrix
+
+# returns number of movies rated by user from trainMatrix
+def countUserRatings(matrix, userID):
+    return matrix.getrowview(userID).getnnz();
+
+# returns sum of movie ratings by user from trainMatrix
+def sumUserRatings(matrix, userID):
+    return matrix.getrowview(userID).sum(1);
