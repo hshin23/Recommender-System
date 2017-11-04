@@ -4,6 +4,7 @@ from scipy.sparse import lil_matrix;
 COUNT_ACTORS = 65134
 COUNT_MOVIES = 65134
 COUNT_TAGS   = 16530
+COUNT_TRAINS = 71535
 
 if __name__ == "__main__":
     actorsFile = open("../res/additional_files/movie_actors.dat", "r");
@@ -45,5 +46,9 @@ if __name__ == "__main__":
     # Tags Matrix
     tagsMatrix = lil_matrix((65134, 16530))
     tagsMatrix = helper.createMatrix(movieTagsFile, tagsMatrix);
+    tagsMatrix = helper.tf_idf(movieTagsFile, tagsMatrix.toarray(), COUNT_MOVIES, COUNT_TAGS)
 
-    newTagsMatrix = helper.tf_idf(movieTagsFile, tagsMatrix.toarray(), 65134, 16530)
+    distMatrix = helper.findSimilarityByTags(movieTagsFile, tagsMatrix)
+    print(distMatrix[1, 1])
+    print(distMatrix[1, 2])
+    # Find similar movies according to tag
