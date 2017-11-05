@@ -1,6 +1,7 @@
 import numpy as np;
 from scipy.sparse import lil_matrix;
 
+
 '''
 * Creating an array for each movie data.
 * Only works for movie data.
@@ -91,10 +92,13 @@ def tf_idf(file, array, rows, cols):
     return tfidfMatrix
 
 '''
+* TODO: Use tag_weights after running tf_idf
+        to somehow make the distance better.
+        And also save that into a file.
 * computes similarity
 * wrapper for jaccard
 '''
-def findSimilarityByTags(file, matrix):
+def findSimilarityByTags(file, out, matrix):
     distMatrix = lil_matrix((65134, 65134))
     id_list = []
     for item in file.readlines()[1:]:
@@ -107,31 +111,43 @@ def findSimilarityByTags(file, matrix):
                 id_list.append(int(tempList[0]))
     file.seek(0)
     for id in id_list:
-        distMatrix = jaccard(file, matrix, distMatrix, id)
+        distMatrix = jaccard(file, out, matrix, distMatrix, id)
     return distMatrix
 
-'''
-* computes jaccard distance
-* returns list of movie_ids with dist
-'''
-def jaccard(file, matrix, distMatrix, id):
-    if matrix[id].sum() == 0:
-        return 0
-    else:
-        union = count_unique(file, matrix, id)
-        inter = count_duplicate(file, matrix, id)
-        last = 0
-        for item in file.readlines()[1:]:
-            item = item.replace("\r", "").replace("\n", "").replace("\t", " ");
-            tempList = item.split(" ");
-            id2 = int(tempList[0])
-            if id2 > last:
-                if union[id2] == 0:
-                    distMatrix[id, id2] = 0
-                else:
-                    distMatrix[id, id2] = 1 - (inter[id2] / union[id2])
-            last = id2
-        return distMatrix
+# computes jaccard distance between id & other_ids
+def jaccard(file, out, matrix, distMatrix, id):
+
+    union = count_unique(file, matrix, id)             # count unique bettwen id & other_ids
+    inter = count_duplicate(file, matrix, id)          # count duplicates between id & other_ids
+
+    for item in file.readlines()[1:]:
+        # parse line
+        item = item.replace("\r", "").replace("\n", "").replace("\t", " ");
+        tempList = item.split(" ");
+        other_id = int(tempList[0])
+
+        # skip if computed already
+        if distMatrix[id, other_id] != 0:
+            continue
+        elif id == other_id:
+            continue
+        else:
+            # print("inter[" + str(id) + ", " + str(other_id) + "] = " + str(inter[other_id]) + "\t union[" + str(id) + ", " + str(other_id) + "] = " + str(union[other_id]))
+
+            # compute jaccard distance
+            jaccard_index = inter[other_id] / union[other_id]
+            jaccard_dist = 1 - jaccard_index
+            distMatrix[id, other_id] = jaccard_dist
+
+            # reset file pointer
+            file.seek(0)
+
+            # write to outfile
+            if jaccard_dist != 1:
+                out.write(str(id) + "\t" + str(other_id) + "\t" + str(jaccard_dist) + "\n")
+    print(distMatrix[1, 1])
+    return distMatrix
+
 
 def count_unique(file, matrix, id):
     sum_id = 0

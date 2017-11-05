@@ -17,6 +17,8 @@ if __name__ == "__main__":
     trainFile = open("../res/additional_files/train.dat", "r");
     usersFile = open("../res/additional_files/user_taggedmovies.dat", "r");
 
+    distByTags = open("../res/additional_files/distbytag.dat", 'w+')
+
     # Actors
     actorsList = [[] for i in range(0, 65134)]
     actorstArray = helper.createMovieNumpy(actorsFile, actorsList);
@@ -48,7 +50,4 @@ if __name__ == "__main__":
     tagsMatrix = helper.createMatrix(movieTagsFile, tagsMatrix);
     tagsMatrix = helper.tf_idf(movieTagsFile, tagsMatrix.toarray(), COUNT_MOVIES, COUNT_TAGS)
 
-    distMatrix = helper.findSimilarityByTags(movieTagsFile, tagsMatrix)
-    print(distMatrix[1, 1])
-    print(distMatrix[1, 2])
-    # Find similar movies according to tag
+    distMatrix = helper.findSimilarityByTags(movieTagsFile, distByTags, tagsMatrix)
