@@ -1,5 +1,30 @@
 import numpy as np;
-from scipy.sparse import lil_matrix;
+from scipy.sparse import lil_matrix, coo_matrix;
+import time
+
+'''
+TODO
+1. TF_IDF of tags
+2. Elimination of tags by tf_idf rank
+'''
+
+'''
+* returns list of unique id
+* file: file to read in from
+* col:  index of the column that contains ids. ranges from 0 ... N
+'''
+def get_unique_ids(file, col):
+    id_list = []
+    for item in file.readlines()[1:]:
+        item = item.replace("\r", "").replace("\n", "").replace("\t", " ");
+        tempList = item.split(" ");
+        current_id = int(tempList[col])
+        try:
+            id_list.index(current_id)
+        except:
+            id_list.append(current_id)
+    file.seek(0)
+    return id_list
 
 
 '''
@@ -30,9 +55,25 @@ def createMatrix(file, matrix):
     for item in file.readlines()[1:]:
         item = item.replace("\r", "").replace("\n", "").replace("\t", " ");
         tempList = item.split(" ");
-        matrix[int(tempList[0]), int(tempList[1])] = tempList[2];
+        if len(tempList) == 2:
+            matrix[int(tempList[0]), int(tempList[1])] = 1;
+        if len(tempList) == 3:
+            matrix[int(tempList[0]), int(tempList[1])] = tempList[2];
     file.seek(0)
     return matrix;
+
+def createCooMatrix(file):
+    row = []
+    col = []
+    data = []
+    for item in file.readlines()[1:]:
+        item = item.replace("\r", "").replace("\n", "").replace("\t", " ");
+        tempList = item.split(" ");
+        row.append(int(tempList[0]))
+        col.append(int(tempList[1]))
+        data.append(float(tempList[2]))
+    file.seek(0)
+    return coo_matrix((data, (row, col)))
 
 '''
 * Term-Frequency
@@ -92,7 +133,7 @@ def tf_idf(file, array, rows, cols):
     return tfidfMatrix
 
 '''
-* TODO: Use tag_weights after running tf_idf
+* TODO: Use tag_weights after running tf_id/
         to somehow make the distance better.
         And also save that into a file.
 * computes similarity
@@ -111,45 +152,32 @@ def findSimilarityByTags(file, out, matrix):
                 id_list.append(int(tempList[0]))
     file.seek(0)
     for id in id_list:
-        distMatrix = jaccard(file, out, matrix, distMatrix, id)
+        distMatrix = jaccard(file, out, matrix, distMatrix, id, id_list)
+        # print(str(id) + "/65130")
     return distMatrix
 
 # computes jaccard distance between id & other_ids
-def jaccard(file, out, matrix, distMatrix, id):
-
-    union = count_unique(file, matrix, id)             # count unique bettwen id & other_ids
-    inter = count_duplicate(file, matrix, id)          # count duplicates between id & other_ids
-
-    for item in file.readlines()[1:]:
-        # parse line
-        item = item.replace("\r", "").replace("\n", "").replace("\t", " ");
-        tempList = item.split(" ");
-        other_id = int(tempList[0])
-
+# TODO: make union/inter calculation faster..
+def jaccard(file, out, matrix, distMatrix, id, id_list):
+    union = count_unique(file, matrix, id, id_list)             # count unique bettwen id & other_ids
+    inter = count_duplicate(file, matrix, id, id_list)          # count duplicates between id & other_ids
+    for item in id_list:
         # skip if computed already
-        if distMatrix[id, other_id] != 0:
-            continue
-        elif id == other_id:
+        if distMatrix[id, item] != 0:
             continue
         else:
-            # print("inter[" + str(id) + ", " + str(other_id) + "] = " + str(inter[other_id]) + "\t union[" + str(id) + ", " + str(other_id) + "] = " + str(union[other_id]))
-
             # compute jaccard distance
-            jaccard_index = inter[other_id] / union[other_id]
+            jaccard_index = inter[item] / union[item]
             jaccard_dist = 1 - jaccard_index
-            distMatrix[id, other_id] = jaccard_dist
-
+            distMatrix[id, item] = jaccard_dist
             # reset file pointer
             file.seek(0)
-
             # write to outfile
             if jaccard_dist != 1:
-                out.write(str(id) + "\t" + str(other_id) + "\t" + str(jaccard_dist) + "\n")
-    print(distMatrix[1, 1])
+                out.write(str(id) + "\t" + str(item) + "\t" + str(jaccard_dist) + "\n")
     return distMatrix
 
-
-def count_unique(file, matrix, id):
+def count_unique(file, matrix, id, id_list):
     sum_id = 0
     sum_list = [0 for i in range(0, 65134)]
     for item in file.readlines()[1:]:
@@ -163,7 +191,7 @@ def count_unique(file, matrix, id):
     sum_list = [x + sum_id for x in sum_list]
     return sum_list
 
-def count_duplicate(file, matrix, id):
+def count_duplicate(file, matrix, id, id_list):
     inter = [0 for i in range(0, 65134)]
     for item in file.readlines()[1:]:
         item = item.replace("\r", "").replace("\n", "").replace("\t", " ");
@@ -180,3 +208,22 @@ def countUserRatings(matrix, userID):
 # returns sum of movie ratings by user from trainMatrix
 def sumUserRatings(matrix, userID):
     return matrix.getrowview(userID).sum(1);
+
+# cut down by top K
+def cutdown(matrix, orig, out, K):
+    matrix = matrix.toarray()
+    last_id = 0
+    for item in orig.readlines()[1:]:
+        item = item.replace("\r", "").replace("\n", "").replace("\t", " ");
+        tempList = item.split(" ");
+        i = int(tempList[0])
+        if i == last_id:
+            continue
+        for j in range(0, K):
+            if matrix[i].sum() != 0:
+                _index = matrix[i].tolist().index(matrix[i].max())
+                matrix[i][_index] = 0
+                out.write(str(i) + "\t" + str(_index) + "\n")
+        last_id = i
+    orig.seek(0)
+
