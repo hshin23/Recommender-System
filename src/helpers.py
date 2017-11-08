@@ -1,6 +1,6 @@
 import numpy as np;
 from scipy.sparse import lil_matrix, coo_matrix;
-import time
+import progressbar
 
 '''
 TODO
@@ -51,7 +51,8 @@ def createMovieNumpy(file, list):
   there are a lot of users missing
   and not all user have seen all movies.
 '''
-def createMatrix(file, matrix):
+def createMatrix(file, row, col):
+    matrix = lil_matrix((row, col))
     for item in file.readlines()[1:]:
         item = item.replace("\r", "").replace("\n", "").replace("\t", " ");
         tempList = item.split(" ");
@@ -69,9 +70,14 @@ def createCooMatrix(file):
     for item in file.readlines()[1:]:
         item = item.replace("\r", "").replace("\n", "").replace("\t", " ");
         tempList = item.split(" ");
-        row.append(int(tempList[0]))
-        col.append(int(tempList[1]))
-        data.append(float(tempList[2]))
+        if len(tempList) == 3:
+            row.append(int(tempList[0]))
+            col.append(int(tempList[1]))
+            data.append(float(tempList[2]))
+        else:
+            row.append(int(tempList[0]))
+            col.append(int(tempList[1]))
+            data.append(0)
     file.seek(0)
     return coo_matrix((data, (row, col)))
 
@@ -226,4 +232,3 @@ def cutdown(matrix, orig, out, K):
                 out.write(str(i) + "\t" + str(_index) + "\n")
         last_id = i
     orig.seek(0)
-
