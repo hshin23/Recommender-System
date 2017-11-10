@@ -18,8 +18,7 @@ def createMovieNumpy(file, list):
         item = item.replace("\r", "").replace("\n", "");
         tempList = item.split("\t");
         list[int(tempList[0]) - 1].append(tempList[1:]);
-    array = np.array(list);
-    return array;
+    return list;
 
 ''' 
  * This matrix contains users as rows
@@ -59,15 +58,15 @@ def matrixFactorization(file):
     file_path = '../res/additional_files/train.dat';
     
     reader = Reader(line_format='user item rating', sep=' ');
-
+    
     data = Dataset.load_from_file(file_path, reader=reader);
-    data.split(n_folds=6);  
+    data.split(n_folds=5);  
 
     print("Starting Training");
-    trainset = data.build_full_trainset();
+    trainset = data.build_full_trainset(); 
     
+    algo = SVD(n_factors=65);
 
-    algo = SVD(n_factors=50, n_epochs=30);
     algo.train(trainset);
 
     print("Starting Prediction");
@@ -81,13 +80,8 @@ def matrixFactorization(file):
     perf = evaluate(algo, data, measures=['RMSE', 'MAE']);
     print_perf(perf); 
     answerFile.close();
+    
 
-testFile = open("../res/additional_files/test.dat", "r");
-trainFile = open("../res/additional_files/train.dat", "r");                  
-matrixFactorization(testFile);
-
-def actorsFact(file):
-   from sklearn.metrics import jaccard_similarity_score
 
 
     
