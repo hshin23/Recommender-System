@@ -38,37 +38,33 @@ def createMatrix(file, matrix):
     
 
 '''
-  Making Item to Item Prediction based just on ratings, 
-  this will contribute to the main prediction.
-  It is really slow right now. 
-  This takes the cosine distance between movie columns,
-  I will go more in to details on how it works once 
-  it is completely working. I am still working on this.
+  Matrix Factorization using
+   Surprise Library
  '''
-
 def matrixFactorization(file):
     from surprise import SVD
     from surprise import Dataset
     from surprise import Reader
     from surprise import evaluate, print_perf
-    
+
     print("Starting File")
     answerFile = open("../res/additional_files/factAnswer.dat", "w");
-
+    #Loading training file information
     file_path = '../res/additional_files/train.dat';
-    
     reader = Reader(line_format='user item rating', sep=' ');
     
     data = Dataset.load_from_file(file_path, reader=reader);
+    
+    #For cross Validation
     data.split(n_folds=5);  
 
+    #Training the SDV algorithm 
     print("Starting Training");
     trainset = data.build_full_trainset(); 
-    
-    algo = SVD(n_factors=65);
-
+    algo = SVD(n_factors=40);
     algo.train(trainset);
 
+    #Getting the predictions
     print("Starting Prediction");
     for item in file.readlines()[1:]:
         line = item.replace("\r","").replace("\n","").split(" ");
@@ -77,6 +73,8 @@ def matrixFactorization(file):
         pred = algo.predict(user, item);
         print(np.round(pred.est,2)); 
         answerFile.write(str(np.round(pred.est,1))+"\n");
+        
+    #Printing cross-validation results
     perf = evaluate(algo, data, measures=['RMSE', 'MAE']);
     print_perf(perf); 
     answerFile.close();
