@@ -2,11 +2,7 @@ import helpers as helper
 import time
 import numpy as np
 
-COUNT_ACTORS = 65134
-COUNT_MOVIES = 65134
-COUNT_TAGS   = 16530
 COUNT_USERS = 71535
-
 COUNT_USERS_UNIQUE = 2114
 COUNT_MOVIES_UNIQUE = 10001
 
@@ -17,6 +13,20 @@ FILE_MOVIExMOVIE = open("../res/additional_files/distbytag.dat", "r")
 
 MOVIE_IDS = []
 USER_IDS = []
+
+'''
+   Matrix Factorization using
+   Surprise Library. This 
+   is the one we decided 
+   to used.
+ '''
+helper.matrixFactorization(__FILE_TEST);
+
+#########################################################################################
+
+'''
+  The followings are the other implementations we tried.
+'''
 
 def generate_default_IDs():
     print("Generating unique movie ids from train file...")
