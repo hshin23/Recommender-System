@@ -11,11 +11,16 @@ Recommender system uses the rating information and side information to predict c
 ### Dependencies
 
 A python implementation where `python --version >= 3`
+
  - numpy
  - nltk
  - enchant
+ - flake8
+ - scipy
+ 
 
 Optional
+
  - virtualenv
 
 ### Running
