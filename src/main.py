@@ -1,10 +1,6 @@
 import helpers as helper
-from scipy.sparse import lil_matrix, coo_matrix
-from sklearn.model_selection import train_test_split
-import progressbar
 import time
 import numpy as np
-import math
 
 COUNT_ACTORS = 65134
 COUNT_MOVIES = 65134
