@@ -1,12 +1,5 @@
 import numpy as np;
 from scipy.sparse import lil_matrix, coo_matrix;
-import progressbar
-
-'''
-TODO
-1. TF_IDF of tags
-2. Elimination of tags by tf_idf rank
-'''
 
 '''
 * returns list of unique id
@@ -25,7 +18,6 @@ def get_unique_ids(file, col):
             id_list.append(current_id)
     file.seek(0)
     return id_list
-
 
 '''
 * Creating an array for each movie data.
@@ -63,6 +55,9 @@ def createMatrix(file, row, col):
     file.seek(0)
     return matrix;
 
+'''
+* Create a COO Matrix
+'''
 def createCooMatrix(file):
     row = []
     col = []
@@ -163,7 +158,6 @@ def findSimilarityByTags(file, out, matrix):
     return distMatrix
 
 # computes jaccard distance between id & other_ids
-# TODO: make union/inter calculation faster..
 def jaccard(file, out, matrix, distMatrix, id, id_list):
     union = count_unique(file, matrix, id, id_list)             # count unique bettwen id & other_ids
     inter = count_duplicate(file, matrix, id, id_list)          # count duplicates between id & other_ids
@@ -178,11 +172,12 @@ def jaccard(file, out, matrix, distMatrix, id, id_list):
             distMatrix[id, item] = jaccard_dist
             # reset file pointer
             file.seek(0)
-            # write to outfile
+            # write to outfile only when the distance is not furthest
             if jaccard_dist != 1:
                 out.write(str(id) + "\t" + str(item) + "\t" + str(jaccard_dist) + "\n")
     return distMatrix
 
+# returns list of unique tags between an id and the rest of ids
 def count_unique(file, matrix, id, id_list):
     sum_id = 0
     sum_list = [0 for i in range(0, 65134)]
@@ -197,6 +192,7 @@ def count_unique(file, matrix, id, id_list):
     sum_list = [x + sum_id for x in sum_list]
     return sum_list
 
+# returns list of duplicate tags between an id and the rest of ids
 def count_duplicate(file, matrix, id, id_list):
     inter = [0 for i in range(0, 65134)]
     for item in file.readlines()[1:]:
@@ -232,3 +228,75 @@ def cutdown(matrix, orig, out, K):
                 out.write(str(i) + "\t" + str(_index) + "\n")
         last_id = i
     orig.seek(0)
+
+# computes pearson correlation between two users
+def compute_pearson(userA, userB, train):
+    movies_in_both = get_both(userA, userB, train)
+    if len(movies_in_both) == 0:
+        return [userB, -1]
+    else:
+        ra = get_average(userA, movies_in_both, train)
+        rb = get_average(userB, movies_in_both, train)
+        top = 0
+        bota = 0
+        botb = 0
+        for i in range(0, len(movies_in_both)):
+            rap = train[userA][movies_in_both[i]]
+            rbp = train[userB][movies_in_both[i]]
+            top += ((rap - ra) * (rbp - rb))
+            bota += ((rap - ra) * (rap - ra))
+            botb += ((rbp - rb) * (rbp - rb))
+        bota = np.sqrt(bota)
+        botb = np.sqrt(botb)
+        if bota == 0 or botb == 0:
+            return 0
+        sim = top / (bota * botb)
+        return [userB, sim]
+
+# returns list of movie_ids rated by both users
+def get_both(userA, userB, train):
+    a = []
+    b = []
+    both = []
+    for i, rating in enumerate(train[userA]):
+        if rating != 0:
+            a.append(i)
+    for i, rating in enumerate(train[userB]):
+        if rating != 0:
+            b.append(i)
+            try:
+                a.index(i)
+                both.append(i)
+            except:
+                continue
+    return both
+
+# returns average rating of a user
+def get_average(userA, movies, train):
+    # what happens when there are no similar movies
+    temp = []
+    for movie in movies:
+        temp.append(train[userA][movie])
+    return np.mean(temp)
+
+# predict a user's rating on a movie
+def predict(userA, movie, sims, train):
+    temp = []
+    for elem in train[userA]:
+        if elem != 0:
+            temp.append(elem)
+    ra = np.mean(temp)
+    top = 0
+    bot = 0
+    for sim in sims:
+        # print(sim[1])
+        userB = sim[0]
+        movies_in_both = get_both(userA, userB, train)
+        if len(movies_in_both) == 0:
+            continue
+        rbp = train[userB][movie]
+        rb = get_average(userB, movies_in_both, train)  ## problemo -> NaN
+        top += (rbp - rb) * sim[1]
+        bot += sim[1]
+    ans = ra + (top / bot)
+    return ans
